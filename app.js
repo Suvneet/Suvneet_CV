@@ -1,44 +1,94 @@
-// Minimal JS to support interactions (works with your existing HTML)
-const yearEl = document.getElementById("year");
-if (yearEl) yearEl.textContent = new Date().getFullYear();
+// Interactive CV controls + tiny enhancements
+(() => {
+  const $ = (s, root = document) => root.querySelector(s);
+  const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
 
-const btnPrint = document.getElementById("btnPrint");
-btnPrint?.addEventListener("click", () => window.print());
+  // Footer year
+  const yearEl = $("#year");
+  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 
-const expandAll = document.getElementById("expandAll");
-const collapseAll = document.getElementById("collapseAll");
-const toggleTheme = document.getElementById("toggleTheme");
+  const details = $$(".accordion");
+  const expandAllBtn = $("#expandAll");
+  const collapseAllBtn = $("#collapseAll");
+  const toggleThemeBtn = $("#toggleTheme");
+  const printBtn = $("#btnPrint");
 
-const accordions = () => Array.from(document.querySelectorAll("details.accordion"));
+  // Expand/Collapse
+  expandAllBtn?.addEventListener("click", () => {
+    details.forEach(d => (d.open = true));
+  });
 
-expandAll?.addEventListener("click", () => {
-  accordions().forEach(d => d.open = true);
-});
+  collapseAllBtn?.addEventListener("click", () => {
+    details.forEach(d => (d.open = false));
+    // keep the first "Summary" open for better UX (optional)
+    const summary = $("#summary .accordion");
+    if (summary) summary.open = true;
+  });
 
-collapseAll?.addEventListener("click", () => {
-  accordions().forEach(d => d.open = false);
-});
+  // Theme toggle (dark/light)
+  const THEME_KEY = "suvneet_cv_theme";
+  const applyTheme = (t) => {
+    if (!t) document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+  };
 
-// Optional: theme toggle (light/dark). Minimal + Apple-like.
-toggleTheme?.addEventListener("click", () => {
-  document.documentElement.classList.toggle("force-dark");
-});
+  const saved = localStorage.getItem(THEME_KEY);
+  if (saved) applyTheme(saved);
 
-// If user toggles, respect it by overriding prefers-color-scheme:
-const style = document.createElement("style");
-style.textContent = `
-  .force-dark{
-    color-scheme: dark;
-  }
-  .force-dark:root{
-    --bg: #0b0b0f;
-    --surface: rgba(20,20,26,.78);
-    --surface-2: rgba(20,20,26,.62);
-    --text: #f5f7ff;
-    --muted: rgba(245,247,255,.68);
-    --line: rgba(255,255,255,.10);
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
-    --shadow: 0 14px 40px rgba(0,0,0,.45);
-  }
-`;
-document.head.appendChild(style);
+  toggleThemeBtn?.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    const next = current === "light" ? "" : "light";
+    applyTheme(next);
+    if (next) localStorage.setItem(THEME_KEY, next);
+    else localStorage.removeItem(THEME_KEY);
+  });
+
+  // Print / Save PDF
+  printBtn?.addEventListener("click", () => window.print());
+
+  // Smooth “active” feel: add a micro ripple-like highlight on click for buttons/chips
+  const clickable = [...$$(".btn"), ...$$(".chip"), ...$$("summary.accordion__summary")];
+  clickable.forEach(el => {
+    el.addEventListener("click", (e) => {
+      const rect = el.getBoundingClientRect();
+      const x = (e.clientX ?? rect.left + rect.width / 2) - rect.left;
+      const y = (e.clientY ?? rect.top + rect.height / 2) - rect.top;
+
+      const halo = document.createElement("span");
+      halo.style.position = "absolute";
+      halo.style.left = `${x}px`;
+      halo.style.top = `${y}px`;
+      halo.style.width = "10px";
+      halo.style.height = "10px";
+      halo.style.borderRadius = "999px";
+      halo.style.transform = "translate(-50%,-50%)";
+      halo.style.pointerEvents = "none";
+      halo.style.background = "radial-gradient(circle, rgba(39,210,255,.35), transparent 60%)";
+      halo.style.filter = "blur(0px)";
+      halo.style.opacity = "0.9";
+      halo.style.transition = "transform 550ms cubic-bezier(.2,.8,.2,1), opacity 550ms cubic-bezier(.2,.8,.2,1)";
+      halo.style.zIndex = "2";
+
+      // ensure container is position:relative for absolute child
+      const computed = getComputedStyle(el);
+      if (computed.position === "static") el.style.position = "relative";
+      el.appendChild(halo);
+
+      requestAnimationFrame(() => {
+        halo.style.transform = "translate(-50%,-50%) scale(18)";
+        halo.style.opacity = "0";
+      });
+
+      setTimeout(() => halo.remove(), 600);
+    });
+  });
+
+  // Mobile table: add labels for each cell when the header is hidden
+  // (Only needed if you keep the current HTML table markup.)
+  const rows = $$(".table .row:not(.head)");
+  rows.forEach(row => {
+    const cells = Array.from(row.children);
+    const labels = ["Year", "Institute", "Degree", "Score"];
+    cells.forEach((cell, i) => cell.setAttribute("data-label", labels[i] ?? ""));
+  });
+})();
