@@ -1,63 +1,44 @@
-// Suvneet — Interactive CV helpers
+// Minimal JS to support interactions (works with your existing HTML)
+const yearEl = document.getElementById("year");
+if (yearEl) yearEl.textContent = new Date().getFullYear();
 
-const $ = (sel, root = document) => root.querySelector(sel);
-const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+const btnPrint = document.getElementById("btnPrint");
+btnPrint?.addEventListener("click", () => window.print());
 
-function setTheme(theme) {
-  document.documentElement.setAttribute("data-theme", theme);
-  try { localStorage.setItem("theme", theme); } catch {}
-}
+const expandAll = document.getElementById("expandAll");
+const collapseAll = document.getElementById("collapseAll");
+const toggleTheme = document.getElementById("toggleTheme");
 
-function toggleTheme() {
-  const current = document.documentElement.getAttribute("data-theme") || "dark";
-  setTheme(current === "dark" ? "light" : "dark");
-}
+const accordions = () => Array.from(document.querySelectorAll("details.accordion"));
 
-function setAllAccordions(open) {
-  $$(".accordion").forEach(d => d.open = open);
-}
+expandAll?.addEventListener("click", () => {
+  accordions().forEach(d => d.open = true);
+});
 
-function enhanceAccordions() {
-  // Add subtle ripple highlight on summary click (keyboard-friendly)
-  $$(".accordion__summary").forEach((summary) => {
-    summary.addEventListener("click", () => {
-      summary.animate(
-        [{ transform: "translateY(0)" }, { transform: "translateY(-1px)" }, { transform: "translateY(0)" }],
-        { duration: 220, easing: "ease-out" }
-      );
-    });
-  });
-}
+collapseAll?.addEventListener("click", () => {
+  accordions().forEach(d => d.open = false);
+});
 
-function init() {
-  // year
-  const yearEl = $("#year");
-  if (yearEl) yearEl.textContent = new Date().getFullYear();
+// Optional: theme toggle (light/dark). Minimal + Apple-like.
+toggleTheme?.addEventListener("click", () => {
+  document.documentElement.classList.toggle("force-dark");
+});
 
-  // theme restore
-  const stored = (() => { try { return localStorage.getItem("theme"); } catch { return null; }})();
-  if (stored === "light" || stored === "dark") setTheme(stored);
-  else setTheme("dark");
-
-  // actions
-  $("#toggleTheme")?.addEventListener("click", toggleTheme);
-  $("#expandAll")?.addEventListener("click", () => setAllAccordions(true));
-  $("#collapseAll")?.addEventListener("click", () => setAllAccordions(false));
-  $("#btnPrint")?.addEventListener("click", () => window.print());
-
-  enhanceAccordions();
-
-  // Micro-interaction: animate stats on load
-  const stats = $$(".stat");
-  stats.forEach((el, i) => {
-    el.animate(
-      [
-        { opacity: 0, transform: "translateY(10px)" },
-        { opacity: 1, transform: "translateY(0)" }
-      ],
-      { duration: 520, delay: 120 + i * 90, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" }
-    );
-  });
-}
-
-document.addEventListener("DOMContentLoaded", init);
+// If user toggles, respect it by overriding prefers-color-scheme:
+const style = document.createElement("style");
+style.textContent = `
+  .force-dark{
+    color-scheme: dark;
+  }
+  .force-dark:root{
+    --bg: #0b0b0f;
+    --surface: rgba(20,20,26,.78);
+    --surface-2: rgba(20,20,26,.62);
+    --text: #f5f7ff;
+    --muted: rgba(245,247,255,.68);
+    --line: rgba(255,255,255,.10);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow: 0 14px 40px rgba(0,0,0,.45);
+  }
+`;
+document.head.appendChild(style);
