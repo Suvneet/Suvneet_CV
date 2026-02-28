@@ -1,64 +1,63 @@
-(function () {
-  const $ = (sel, root = document) => root.querySelector(sel);
-  const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
+// Suvneet — Interactive CV helpers
 
-  // Footer year
-  const year = new Date().getFullYear();
-  const yearEl = $("#year");
-  if (yearEl) yearEl.textContent = String(year);
+const $ = (sel, root = document) => root.querySelector(sel);
+const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  // Theme (persist)
-  const themeKey = "suvneet_cv_theme";
-  const saved = localStorage.getItem(themeKey);
-  if (saved === "light" || saved === "dark") {
-    document.documentElement.dataset.theme = saved;
-  }
+function setTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  try { localStorage.setItem("theme", theme); } catch {}
+}
 
-  const toggleThemeBtn = $("#toggleTheme");
-  toggleThemeBtn?.addEventListener("click", () => {
-    const current = document.documentElement.dataset.theme || "dark";
-    const next = current === "dark" ? "light" : "dark";
-    document.documentElement.dataset.theme = next;
-    localStorage.setItem(themeKey, next);
-  });
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "dark";
+  setTheme(current === "dark" ? "light" : "dark");
+}
 
-  // Expand / Collapse all
-  const allAccordions = $$("details.accordion");
+function setAllAccordions(open) {
+  $$(".accordion").forEach(d => d.open = open);
+}
 
-  $("#expandAll")?.addEventListener("click", () => {
-    allAccordions.forEach(d => d.open = true);
-  });
-
-  $("#collapseAll")?.addEventListener("click", () => {
-    allAccordions.forEach(d => d.open = false);
-    // keep summary accessible
-    allAccordions[0]?.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-
-  // Print
-  $("#btnPrint")?.addEventListener("click", () => window.print());
-
-  // Subtle scroll reveal for accordions/cards
-  const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (e.isIntersecting) {
-        e.target.style.willChange = "transform, opacity";
-        e.target.classList.add("is-visible");
-        io.unobserve(e.target);
-      }
-    }
-  }, { threshold: 0.08 });
-
-  // Observe cards & accordions for little polish
-  [...$$(".accordion"), ...$$(".card")].forEach(el => io.observe(el));
-
-  // Keyboard UX: Enter/Space on details summary already works, but add focus ring
-  $$("summary").forEach(s => {
-    s.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape") {
-        const details = s.parentElement;
-        if (details?.tagName === "DETAILS") details.open = false;
-      }
+function enhanceAccordions() {
+  // Add subtle ripple highlight on summary click (keyboard-friendly)
+  $$(".accordion__summary").forEach((summary) => {
+    summary.addEventListener("click", () => {
+      summary.animate(
+        [{ transform: "translateY(0)" }, { transform: "translateY(-1px)" }, { transform: "translateY(0)" }],
+        { duration: 220, easing: "ease-out" }
+      );
     });
   });
-})();
+}
+
+function init() {
+  // year
+  const yearEl = $("#year");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  // theme restore
+  const stored = (() => { try { return localStorage.getItem("theme"); } catch { return null; }})();
+  if (stored === "light" || stored === "dark") setTheme(stored);
+  else setTheme("dark");
+
+  // actions
+  $("#toggleTheme")?.addEventListener("click", toggleTheme);
+  $("#expandAll")?.addEventListener("click", () => setAllAccordions(true));
+  $("#collapseAll")?.addEventListener("click", () => setAllAccordions(false));
+  $("#btnPrint")?.addEventListener("click", () => window.print());
+
+  enhanceAccordions();
+
+  // Micro-interaction: animate stats on load
+  const stats = $$(".stat");
+  stats.forEach((el, i) => {
+    el.animate(
+      [
+        { opacity: 0, transform: "translateY(10px)" },
+        { opacity: 1, transform: "translateY(0)" }
+      ],
+      { duration: 520, delay: 120 + i * 90, easing: "cubic-bezier(.2,.8,.2,1)", fill: "both" }
+    );
+  });
+}
+
+document.addEventListener("DOMContentLoaded", init);
